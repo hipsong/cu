@@ -54,7 +54,7 @@ try:
     col1.metric("누적 총 매출", f"{total_sales_man/10000:.2f} 억")
     col2.metric("최근 월 매출", f"{latest_sales_man:,.0f} 만원", f"{growth:.1f}%")
     col3.metric("최고 월 매출", f"{df['총매출_만원'].max():,.0f} 만원")
-    col4.metric("운영 채널", f"{len(platforms)}개")
+    col4.metric("판매플랫폼", f"{len(platforms)}개")
 
     st.divider()
 
