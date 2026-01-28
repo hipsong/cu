@@ -9,7 +9,7 @@ st.set_page_config(page_title="오픈마켓 매출 분석 대시보드", layout=
 # 데이터 로드 함수 수정 (인코딩 문제 해결)
 @st.cache_data
 def load_data():
-    file_path = '오픈마켓 매출.xlsx - Sheet1.csv'
+    file_path = '오픈마켓 매출.csv'
     try:
         # 먼저 cp949(엑셀 기본)로 시도
         df = pd.read_csv(file_path, encoding='cp949')
