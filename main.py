@@ -7,7 +7,7 @@ st.set_page_config(page_title="오픈마켓 매출 분석", layout="wide")
 
 @st.cache_data
 def load_and_clean_data():
-    file_path = '오픈마켓 매출.xlsx - Sheet1.csv'
+    file_path = '오픈마켓 매출.csv'
     
     # 1. 인코딩 문제 해결하며 불러오기
     try:
