@@ -23,12 +23,13 @@ FILE_PATH = os.path.join(BASE_DIR, "data", "오픈마켓 매출.xlsx")
 # 엑셀 시트 자동 로드
 # =========================
 @st.cache_data
+@st.cache_data
 def load_all_sheets(file_path):
-    xls = pd.ExcelFile(file_path)
+    xls = pd.ExcelFile(file_path, engine="openpyxl")
     sheets = {}
 
     for sheet in xls.sheet_names:
-        df = pd.read_excel(xls, sheet_name=sheet)
+        df = pd.read_excel(xls, sheet_name=sheet, engine="openpyxl")
         df = df.rename(columns={df.columns[0]: "월"})
 
         df_long = df.melt(
