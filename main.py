@@ -4,7 +4,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 
 # 페이지 설정
-st.set_page_config(page_title="오픈마켓 매출 분석 대시보드", layout="wide")
+st.set_page_config(page_title="cu메디컬 오픈마켓 매출 분석", layout="wide")
 
 @st.cache_data
 def load_and_clean_data():
