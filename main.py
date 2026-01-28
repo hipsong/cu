@@ -9,7 +9,7 @@ st.set_page_config(page_title="오픈마켓 매출 분석 대시보드", layout=
 # 데이터 로드
 @st.cache_data
 def load_data():
-    df = pd.read_csv('오픈마켓 매출.xlsx - Sheet1.csv')
+    df = pd.read_csv('오픈마켓 매출.csv')
     df['날짜'] = pd.to_datetime(df['날짜'])
     # 총 매출 계산
     df['총매출'] = df.iloc[:, 1:].sum(axis=1)
