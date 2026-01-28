@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
 import os
 
 # =========================
@@ -30,11 +29,8 @@ def load_all_sheets(file_path):
 
     for sheet in xls.sheet_names:
         df = pd.read_excel(xls, sheet_name=sheet)
-
-        # 첫 컬럼을 '월'로 통일
         df = df.rename(columns={df.columns[0]: "월"})
 
-        # long format 변환
         df_long = df.melt(
             id_vars="월",
             var_name="연도",
@@ -49,7 +45,7 @@ def load_all_sheets(file_path):
     return sheets
 
 # =========================
-# 데이터 로딩 (try / except 정상 구조)
+# 데이터 로딩
 # =========================
 try:
     sheets_data = load_all_sheets(FILE_PATH)
@@ -73,6 +69,7 @@ yearly_sales = (
     df_long.groupby("연도")["매출"]
     .sum()
     .reset_index()
+    .set_index("연도")
 )
 
 # =========================
@@ -81,48 +78,30 @@ yearly_sales = (
 st.subheader(f"📌 {selected_market} 연간 매출 요약")
 cols = st.columns(len(yearly_sales))
 
-for i, row in yearly_sales.iterrows():
-    cols[i].metric(
-        label=row["연도"],
-        value=f"{row['매출']:,.0f} 원"
-    )
+for i, (year, value) in enumerate(yearly_sales["매출"].items()):
+    cols[i].metric(year, f"{value:,.0f} 원")
 
 st.divider()
 
 # =========================
-# 월별 매출 추이
+# 월별 매출 추이 (라인 차트)
 # =========================
 st.subheader("📈 월별 매출 추이")
 
-fig, ax = plt.subplots()
-for year in df_long["연도"].unique():
-    year_df = df_long[df_long["연도"] == year]
-    ax.plot(
-        year_df["월"],
-        year_df["매출"],
-        marker="o",
-        label=year
-    )
+monthly_pivot = df_long.pivot(
+    index="월",
+    columns="연도",
+    values="매출"
+)
 
-ax.set_xlabel("월")
-ax.set_ylabel("매출 (원)")
-ax.legend()
-ax.grid(True)
-
-st.pyplot(fig)
+st.line_chart(monthly_pivot)
 
 # =========================
 # 연간 총매출 비교
 # =========================
 st.subheader("📊 연간 총매출 비교")
 
-fig2, ax2 = plt.subplots()
-ax2.bar(yearly_sales["연도"], yearly_sales["매출"])
-ax2.set_xlabel("연도")
-ax2.set_ylabel("매출 (원)")
-ax2.grid(axis="y")
-
-st.pyplot(fig2)
+st.bar_chart(yearly_sales)
 
 # =========================
 # 전체 오픈마켓 비교
@@ -132,18 +111,18 @@ st.subheader("🏬 전체 오픈마켓 연간 매출 비교")
 
 all_data = pd.concat(sheets_data.values())
 all_yearly = (
-    all_data.groupby(["오픈마켓", "연도"])["매출"]
+    all_data.groupby(["연도", "오픈마켓"])["매출"]
     .sum()
     .reset_index()
 )
 
-pivot_df = all_yearly.pivot(
+pivot_all = all_yearly.pivot(
     index="연도",
     columns="오픈마켓",
     values="매출"
 )
 
-st.bar_chart(pivot_df)
+st.bar_chart(pivot_all)
 
 # =========================
 # 원본 데이터
