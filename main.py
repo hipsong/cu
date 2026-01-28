@@ -80,7 +80,7 @@ try:
         c1, c2 = st.columns(2)
         
         with c1:
-            st.write("### 🥧 채널별 누적 비중")
+            st.write("### 🥧 플랫폼별 누적 비중")
             pie_values = df[selected_p_man].sum()
             fig_pie = px.pie(values=pie_values, names=[display_map[k] for k in pie_values.index],
                              hole=0.4, color_discrete_sequence=px.colors.qualitative.Pastel)
@@ -88,7 +88,7 @@ try:
             st.plotly_chart(fig_pie, use_container_width=True)
             
         with c2:
-            st.write("### 📊 채널별 월 평균 매출")
+            st.write("### 📊 플랫폼별 월 평균 매출")
             avg_val = df[selected_p_man].mean().sort_values()
             fig_bar = px.bar(x=avg_val.values, y=[display_map[k] for k in avg_val.index], 
                              orientation='h', text_auto=',.0f')
