@@ -1,60 +1,42 @@
 import streamlit as st
 import pandas as pd
+import os
 
-st.set_page_config(page_title="오픈마켓 엑셀 시트 자동 인식", layout="wide")
+st.set_page_config(page_title="네이버 매출", layout="wide")
 
-st.title("📊 오픈마켓 엑셀 시트 자동 인식")
+FILE_PATH = "data/오픈마켓 매출.xlsx"
 
-# 1. 파일 업로드
-uploaded_file = st.file_uploader(
-    "엑셀 파일(xlsx)을 업로드하세요",
-    type=["xlsx"]
-)
+st.title("📊 네이버 월별 매출")
 
-if uploaded_file is None:
-    st.info("⬆️ 분석할 엑셀 파일을 업로드해 주세요.")
+# 1. 파일 존재 여부 확인
+if not os.path.exists(FILE_PATH):
+    st.error("❌ 엑셀 파일을 찾을 수 없습니다.")
     st.stop()
 
-# 2. 엑셀 파일 열기
+# 2. Sheet1만 명시적으로 읽기
 try:
-    xls = pd.ExcelFile(uploaded_file)
+    df = pd.read_excel(FILE_PATH, sheet_name=0)
 except Exception as e:
-    st.error("❌ 엑셀 파일을 읽는 중 오류가 발생했습니다.")
+    st.error("❌ 엑셀 파일을 읽는 중 오류 발생")
     st.exception(e)
     st.stop()
 
-# 3. 시트 목록
-sheet_names = xls.sheet_names
-st.success(f"✅ 시트 {len(sheet_names)}개 인식됨")
-
-# 4. 시트 선택
-selected_sheet = st.selectbox(
-    "확인할 시트를 선택하세요",
-    sheet_names
-)
-
-# 5. 선택된 시트 로드
-try:
-    df = pd.read_excel(xls, sheet_name=selected_sheet)
-except Exception as e:
-    st.error("❌ 시트를 불러오는 중 오류 발생")
-    st.exception(e)
-    st.stop()
-
-# 6. 데이터 출력
-st.subheader(f"📄 [{selected_sheet}] 데이터 미리보기")
+# 3. 데이터 미리보기
+st.subheader("원본 데이터")
 st.dataframe(df, use_container_width=True)
 
-# 7. 기본 정보
-st.markdown("### ℹ️ 기본 정보")
-col1, col2, col3 = st.columns(3)
+# 4. 컬럼 정리
+# 첫 컬럼: 월, 나머지: 연도
+df = df.rename(columns={df.columns[0]: "월"})
 
-with col1:
-    st.metric("행(row)", df.shape[0])
+# 5. 연도 선택
+years = [col for col in df.columns if col != "월"]
+selected_year = st.selectbox("연도 선택", years)
 
-with col2:
-    st.metric("열(column)", df.shape[1])
+# 6. 차트용 데이터
+chart_df = df[["월", selected_year]].set_index("월")
 
-with col3:
-    st.metric("결측치 수", int(df.isna().sum().sum()))
+st.subheader(f"📈 네이버 매출 추이 ({selected_year})")
+st.line_chart(chart_df)
+
 
