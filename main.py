@@ -6,69 +6,85 @@ import plotly.graph_objects as go
 # 페이지 설정
 st.set_page_config(page_title="오픈마켓 매출 분석 대시보드", layout="wide")
 
-# 데이터 로드
+# 데이터 로드 함수 수정 (인코딩 문제 해결)
 @st.cache_data
 def load_data():
-    df = pd.read_csv('오픈마켓 매출.csv')
+    file_path = '오픈마켓 매출.csv'
+    try:
+        # 먼저 cp949(엑셀 기본)로 시도
+        df = pd.read_csv(file_path, encoding='cp949')
+    except:
+        # 안되면 euc-kr로 시도
+        df = pd.read_csv(file_path, encoding='euc-kr')
+        
     df['날짜'] = pd.to_datetime(df['날짜'])
-    # 총 매출 계산
+    # 숫자 데이터 내 콤마(,) 제거 및 수치화 (혹시 모를 에러 방지)
+    for col in df.columns[1:]:
+        if df[col].dtype == 'object':
+            df[col] = df[col].str.replace(',', '').astype(float)
+            
     df['총매출'] = df.iloc[:, 1:].sum(axis=1)
     return df
 
 try:
     df = load_data()
 
-    st.title("📈 오픈마켓 매출 분석 대시보드")
-    st.markdown("전체 플랫폼의 매출 추이와 마켓별 성과를 분석합니다.")
+    st.title("📊 오픈마켓 매출 성과 분석")
+    st.markdown(f"**데이터 기간:** {df['날짜'].min().strftime('%Y-%m')} ~ {df['날짜'].max().strftime('%Y-%m')}")
 
-    # --- 상단 지표 (KPI) ---
-    col1, col2, col3 = st.columns(3)
+    # --- KPI 지표 ---
+    col1, col2, col3, col4 = st.columns(4)
     total_sales = df['총매출'].sum()
-    avg_sales = df['총매출'].mean()
-    max_month = df.loc[df['총매출'].idxmax(), '날짜'].strftime('%Y-%m')
+    last_month_sales = df['총매출'].iloc[-1]
+    prev_month_sales = df['총매출'].iloc[-2]
+    mom_growth = (last_month_sales - prev_month_sales) / prev_month_sales * 100
 
     col1.metric("누적 총 매출", f"{total_sales:,.0f}원")
-    col2.metric("월 평균 매출", f"{avg_sales:,.0f}원")
-    col3.metric("최고 매출 월", max_month)
+    col2.metric("최근 월 매출", f"{last_month_sales:,.0f}원", f"{mom_growth:.1f}%")
+    col3.metric("플랫폼 수", f"{len(df.columns)-2}개")
+    col4.metric("최고 매출액", f"{df['총매출'].max():,.0f}원")
 
     st.divider()
 
-    # --- 메인 그래프: 매출 추이 ---
-    st.subheader("🗓️ 월별 매출 통합 추이")
-    tab1, tab2 = st.tabs(["라인 차트", "누적 영역 차트"])
+    # --- 매출 추이 그래프 ---
+    st.subheader("📈 월별 매출 성장 추이")
     
-    with tab1:
-        fig_line = px.line(df, x='날짜', y=['네이버', '공식몰', '지마켓', '옥션', '쿠팡', '11번가'], 
-                          title="플랫폼별 매출 흐름")
-        st.plotly_chart(fig_line, use_container_width=True)
+    # 멀티 셀렉트 (플랫폼 선택)
+    platforms = df.columns[1:-1].tolist()
+    selected = st.multiselect("확인할 플랫폼을 선택하세요", platforms, default=platforms)
     
-    with tab2:
-        fig_area = px.area(df, x='날짜', y=['네이버', '공식몰', '지마켓', '옥션', '쿠팡', '11번가'], 
-                          title="플랫폼별 매출 비중 추이")
-        st.plotly_chart(fig_area, use_container_width=True)
+    fig_line = px.line(df, x='날짜', y=selected, markers=True,
+                      title="플랫폼별 매출 변화 (월간)")
+    fig_line.update_layout(hovermode="x unified")
+    st.plotly_chart(fig_line, use_container_width=True)
 
-    # --- 상세 분석 섹션 ---
-    col_left, col_right = st.columns(2)
+    # --- 분석 대시보드 하단 ---
+    c1, c2 = st.columns([6, 4])
+    
+    with c1:
+        st.subheader("🛶 시장 점유율 (누적 비중)")
+        platform_sums = df[platforms].sum().sort_values(ascending=True)
+        fig_bar = px.bar(x=platform_sums.values, y=platform_sums.index, orientation='h',
+                        labels={'x':'매출 총합', 'y':'플랫폼'},
+                        color=platform_sums.values, color_continuous_scale='Viridis')
+        st.plotly_chart(fig_bar, use_container_width=True)
 
-    with col_left:
-        st.subheader("📊 플랫폼별 매출 점유율")
-        platform_sums = df.iloc[:, 1:-1].sum().sort_values(ascending=False)
-        fig_pie = px.pie(values=platform_sums.values, names=platform_sums.index, hole=0.4)
+    with c2:
+        st.subheader("🎯 플랫폼별 기여도")
+        fig_pie = px.pie(names=platform_sums.index, values=platform_sums.values, hole=0.5)
         st.plotly_chart(fig_pie, use_container_width=True)
 
-    with col_right:
-        st.subheader("🔍 데이터 상세보기")
-        st.dataframe(df.sort_values('날짜', ascending=False), height=400)
-
-    # --- 분석 인사이트 ---
-    st.sidebar.header("분석 옵션")
-    selected_platform = st.sidebar.selectbox("상세 분석할 플랫폼 선택", df.columns[1:-1])
-    
-    st.sidebar.write(f"**{selected_platform}** 분석 결과:")
-    platform_growth = ((df[selected_platform].iloc[-1] / df[selected_platform].iloc[0]) - 1) * 100
-    st.sidebar.write(f"- 기간 내 성장률: {platform_growth:.2f}%")
+    # --- 데이터 분석 리포트 자동 생성 ---
+    st.divider()
+    st.subheader("📝 데이터 분석 요약")
+    best_platform = platform_sums.index[-1]
+    st.info(f"""
+    1. **주력 채널:** 현재 가장 매출 기여도가 높은 채널은 **{best_platform}**입니다.
+    2. **성장세:** 전체 매출은 시간의 흐름에 따라 변화하고 있으며, 최근 월 매출은 전월 대비 {mom_growth:.1f}% 변화했습니다.
+    3. **제언:** 매출 변동성이 큰 플랫폼의 마케팅 집행 시기를 데이터의 피크 지점과 비교해 분석할 필요가 있습니다.
+    """)
 
 except Exception as e:
-    st.error(f"데이터를 불러오는 중 오류가 발생했습니다: {e}")
-    st.info("CSV 파일명이 '오픈마켓 매출.xlsx - Sheet1.csv'인지 확인해 주세요.")
+    st.error(f"오류가 발생했습니다: {e}")
+    st.warning("CSV 파일을 메모장으로 열어 '다른 이름으로 저장'할 때 인코딩을 'UTF-8'로 설정하여 다시 저장해 보세요.")
 
